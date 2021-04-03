@@ -1,0 +1,163 @@
+﻿<Window
+    x:Class="LinkFileRepair.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:LinkFileRepair"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ui="http://schemas.modernwpf.com/2019"
+    Title="快捷方式修复" Width="800"
+    Height="450"
+    ui:WindowHelper.UseModernWindowStyle="True"
+    mc:Ignorable="d">
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="8" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="8" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid x:Name="grdSettings">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="8" />
+
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="8" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="8" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock VerticalAlignment="Center">Lnk搜索目录：</TextBlock>
+            <TextBox
+                x:Name="txtTemplateFileDrop"
+                Grid.Column="2"
+                VerticalAlignment="Center"
+                Text="{Binding LnkDir}" />
+            <Button
+                Grid.Column="4"
+                VerticalAlignment="Center"
+                Click="BrowseButton_Click" Content="浏览" />
+            <!--<flat:Button Content="刷新" x:Name="btnTemplateRefresh"
+                        VerticalAlignment="Center"  Grid.Column="6" Click="btnTemplateRefresh_Click" />-->
+
+            <TextBlock Grid.Row="2" VerticalAlignment="Center">源文件搜索目录：</TextBlock>
+            <TextBox
+                x:Name="txtSourceFileDrop" Grid.Row="2"
+                Grid.Column="2"
+                VerticalAlignment="Center"
+                AllowDrop="True"
+                Text="{Binding SourceDir}" />
+            <Button
+                Grid.Row="2" Grid.Column="4"
+                VerticalAlignment="Center"
+                Click="BrowseSourceButton_Click"
+                Content="浏览" />
+        </Grid>
+
+        <ui:SimpleStackPanel
+            Grid.Row="2" Orientation="Horizontal"
+            Spacing="12">
+            <Button
+                x:Name="btnSearch" Click="Button_Click"
+                Content="查询" />
+            <Button
+                x:Name="btnRepair"
+                Click="RepairButton_Click" Content="修复"
+                IsEnabled="False" />
+            <CheckBox
+                VerticalAlignment="Center"
+                Content="自动隐藏不需要修改的项"
+                IsChecked="{Binding AutoHide}" />
+        </ui:SimpleStackPanel>
+        <DataGrid x:Name="dg"
+            Grid.Row="4" AutoGenerateColumns="False"
+            CanUserAddRows="False"
+            CanUserDeleteRows="False"
+            DataGridCell.Selected="DataGrid_Selected"
+            FrozenColumnCount="2"
+            ItemsSource="{Binding Files}"
+            PreviewKeyDown="DataGrid_PreviewKeyDown"
+            SelectionUnit="Cell">
+            <DataGrid.Columns>
+                <DataGridTextColumn
+                    Binding="{Binding Status}"
+                    Header="状态" IsReadOnly="True" />
+                <DataGridTemplateColumn
+                    Width="300" Header="信息"
+                    IsReadOnly="True">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ui:SimpleStackPanel
+                                Margin="4" Orientation="Vertical"
+                                Spacing="4">
+                                <TextBlock
+                                    FontWeight="Bold"
+                                    Text="{Binding Name1}"
+                                    TextWrapping="Wrap" />
+                                <TextBlock
+                                    Opacity="0.8"
+                                    Text="{Binding Name2}"
+                                    TextWrapping="Wrap" />
+                            </ui:SimpleStackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn
+                    Width="300" Header="快捷方式路径"
+                    IsReadOnly="True">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock
+                                Margin="4" VerticalAlignment="Center"
+                                PreviewMouseLeftButtonDown="TextBlock_PreviewMouseLeftButtonDown"
+                                Text="{Binding LnkPath}"
+                                TextWrapping="Wrap" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn
+                    Width="400" Header="旧的源路径"
+                    IsReadOnly="True">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock
+                                Margin="4" VerticalAlignment="Center"
+                                PreviewMouseLeftButtonDown="TextBlock_PreviewMouseLeftButtonDown"
+                                Text="{Binding OldPath}"
+                                TextWrapping="Wrap" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Width="400" Header="新的源路径">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock
+                                Margin="4" VerticalAlignment="Center"
+                                Foreground="{Binding Foreground}"
+                                Text="{Binding NewPath}"
+                                TextWrapping="Wrap" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                    <DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate>
+                            <ComboBox
+                                MinWidth="392   " Margin="4"
+                                VerticalAlignment="Center"
+                                IsEditable="True"
+                                ItemsSource="{Binding NewPaths}"
+                                Text="{Binding NewPath}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellEditingTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>
