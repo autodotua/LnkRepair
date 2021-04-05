@@ -77,8 +77,9 @@
                 Content="自动隐藏不需要修改的项"
                 IsChecked="{Binding AutoHide}" />
         </ui:SimpleStackPanel>
-        <DataGrid x:Name="dg"
-            Grid.Row="4" AutoGenerateColumns="False"
+        <DataGrid
+            x:Name="dg" Grid.Row="4"
+            AutoGenerateColumns="False"
             CanUserAddRows="False"
             CanUserDeleteRows="False"
             DataGridCell.Selected="DataGrid_Selected"
@@ -148,12 +149,30 @@
                     </DataGridTemplateColumn.CellTemplate>
                     <DataGridTemplateColumn.CellEditingTemplate>
                         <DataTemplate>
-                            <ComboBox
-                                MinWidth="392   " Margin="4"
-                                VerticalAlignment="Center"
-                                IsEditable="True"
-                                ItemsSource="{Binding NewPaths}"
-                                Text="{Binding NewPath}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ComboBox
+                                    Margin="4" VerticalAlignment="Center"
+                                    IsEditable="True" HorizontalAlignment="Stretch"
+                                    ItemsSource="{Binding NewPaths}"
+                                    Text="{Binding NewPath}" />
+                                <Button
+                                    Grid.Column="2"
+                                    Click="BrowseFileButton_Click"
+                                    Content="浏览文件.."
+                                    Tag="{Binding .}" />
+                                <Button
+                                    Grid.Column="4"
+                                    Click="BrowseFolderButton_Click"
+                                    Content="浏览目录.."
+                                    Tag="{Binding .}" />
+                            </Grid>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellEditingTemplate>
                 </DataGridTemplateColumn>

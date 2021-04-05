@@ -23,67 +23,135 @@ using System.Windows.Navigation;
 
 namespace LinkFileRepair
 {
-    public class MainWindowViewModel : INotifyPropertyChanged
+    public class LnkFile : INotifyPropertyChanged
     {
-        public event PropertyChangedEventHandler PropertyChanged;
+        private string lnkPath;
 
-        private ObservableCollection<LnkFile> files;
+        private string newPath;
 
-        public ObservableCollection<LnkFile> Files
-        {
-            get => files;
-            set => this.SetValueAndNotify(ref files, value, nameof(Files));
-        }
+        private ObservableCollection<string> newPaths;
+
+        private string oldPath;
+
+        private Shortcut shortCut;
 
         private string status;
+
+        public LnkFile(string path)
+        {
+            Debug.Assert(path.EndsWith(".lnk"));
+            LnkPath = path;
+            ShortCut = Shortcut.ReadFromFile(path);
+            OldPath = shortCut.LinkTargetIDList.Path;
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public Brush Foreground => NewPaths != null && NewPaths.Count > 1 ? Brushes.Red : App.Current.MainWindow.Foreground;
+
+        public string LnkPath
+        {
+            get => lnkPath;
+            set => this.SetValueAndNotify(ref lnkPath, value, nameof(LnkPath), nameof(Name1));
+        }
+
+        public string Name1 => Path.GetFileName(LnkPath);
+
+        public string Name2 => Path.GetFileName(OldPath);
+
+        public bool Need { get; set; } = true;
+
+        public string NewPath
+        {
+            get => newPath;
+            set => this.SetValueAndNotify(ref newPath, value.Trim('"'), nameof(NewPath));
+        }
+
+        public ObservableCollection<string> NewPaths
+        {
+            get => newPaths;
+            set => this.SetValueAndNotify(ref newPaths, value, nameof(NewPaths), nameof(Foreground));
+        }
+
+        public string OldPath
+        {
+            get => oldPath;
+            set => this.SetValueAndNotify(ref oldPath, value, nameof(OldPath), nameof(Name2));
+        }
+
+        public Shortcut ShortCut
+        {
+            get => shortCut;
+            set => this.SetValueAndNotify(ref shortCut, value, nameof(ShortCut));
+        }
 
         public string Status
         {
             get => status;
             set => this.SetValueAndNotify(ref status, value, nameof(Status));
         }
-
-        private bool isWorking;
-
-        public bool IsWorking
-        {
-            get => isWorking;
-            set => this.SetValueAndNotify(ref isWorking, value, nameof(IsWorking));
-        }
-
-        private string lnkDir = @"O:\旧事重提\家庭\出行\个人\20210315-慈城附近";
-
-        public string LnkDir
-        {
-            get => lnkDir;
-            set => this.SetValueAndNotify(ref lnkDir, value, nameof(LnkDir));
-        }
-
-        private string sourceDir = "O:";
-
-        public string SourceDir
-        {
-            get => sourceDir;
-            set => this.SetValueAndNotify(ref sourceDir, value, nameof(SourceDir));
-        }
-
-        private bool autoHide = true;
-
-        public bool AutoHide
-        {
-            get => autoHide;
-            set => this.SetValueAndNotify(ref autoHide, value, nameof(AutoHide));
-        }
     }
 
     public partial class MainWindow : Window
     {
-        public MainWindowViewModel ViewModel { get; } = new MainWindowViewModel();
-
         public MainWindow()
         {
             DataContext = ViewModel;
             InitializeComponent();
+        }
+
+        public MainWindowViewModel ViewModel { get; } = new MainWindowViewModel();
+
+        /// <summary>
+        /// 比较2个字符串的相似度（使用余弦相似度）
+        /// </summary>
+        /// <param name="str1"></param>
+        /// <param name="str2"></param>
+        /// <returns>0-1之间的数</returns>
+        public static double SimilarityCos(string str1, string str2)
+        {
+            str1 = str1.Trim();
+            str2 = str2.Trim();
+            if (string.IsNullOrEmpty(str1) || string.IsNullOrEmpty(str2))
+                return 0;
+
+            List<string> lstr1 = SimpParticiple(str1);
+            List<string> lstr2 = SimpParticiple(str2);
+            //求并集
+            var strUnion = lstr1.Union(lstr2);
+            //求向量
+            List<int> int1 = new List<int>();
+            List<int> int2 = new List<int>();
+            foreach (var item in strUnion)
+            {
+                int1.Add(lstr1.Count(o => o == item));
+                int2.Add(lstr2.Count(o => o == item));
+            }
+
+            double s = 0;
+            double den1 = 0;
+            double den2 = 0;
+            for (int i = 0; i < int1.Count(); i++)
+            {
+                //求分子
+                s += int1[i] * int2[i];
+                //求分母（1）
+                den1 += Math.Pow(int1[i], 2);
+                //求分母（2）
+                den2 += Math.Pow(int2[i], 2);
+            }
+
+            return s / (Math.Sqrt(den1) * Math.Sqrt(den2));
+
+            List<string> SimpParticiple(string str)
+            {
+                List<string> vs = new List<string>();
+                foreach (var item in str)
+                {
+                    vs.Add(item.ToString());
+                }
+                return vs;
+            }
         }
 
         private void BrowseButton_Click(object sender, RoutedEventArgs e)
@@ -95,6 +163,29 @@ namespace LinkFileRepair
             if (dialog.ShowDialog(this) == CommonFileDialogResult.Ok)
             {
                 ViewModel.LnkDir = dialog.FileName;
+            }
+        }
+
+        private void BrowseFileButton_Click(object sender, RoutedEventArgs e)
+        {
+            CommonOpenFileDialog dialog = new CommonOpenFileDialog()
+            {
+            };
+            if (dialog.ShowDialog(this) == CommonFileDialogResult.Ok)
+            {
+                ((sender as FrameworkElement).Tag as LnkFile).NewPath = dialog.FileName;
+            }
+        }
+
+        private void BrowseFolderButton_Click(object sender, RoutedEventArgs e)
+        {
+            CommonOpenFileDialog dialog = new CommonOpenFileDialog()
+            {
+                IsFolderPicker = true,
+            };
+            if (dialog.ShowDialog(this) == CommonFileDialogResult.Ok)
+            {
+                ((sender as FrameworkElement).Tag as LnkFile).NewPath = dialog.FileName;
             }
         }
 
@@ -202,56 +293,47 @@ namespace LinkFileRepair
             }
         }
 
-        /// <summary>
-        /// 比较2个字符串的相似度（使用余弦相似度）
-        /// </summary>
-        /// <param name="str1"></param>
-        /// <param name="str2"></param>
-        /// <returns>0-1之间的数</returns>
-        public static double SimilarityCos(string str1, string str2)
+        private void DataGrid_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            str1 = str1.Trim();
-            str2 = str2.Trim();
-            if (string.IsNullOrEmpty(str1) || string.IsNullOrEmpty(str2))
-                return 0;
-
-            List<string> lstr1 = SimpParticiple(str1);
-            List<string> lstr2 = SimpParticiple(str2);
-            //求并集
-            var strUnion = lstr1.Union(lstr2);
-            //求向量
-            List<int> int1 = new List<int>();
-            List<int> int2 = new List<int>();
-            foreach (var item in strUnion)
+            if (e.Key == Key.C && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
             {
-                int1.Add(lstr1.Count(o => o == item));
-                int2.Add(lstr2.Count(o => o == item));
-            }
-
-            double s = 0;
-            double den1 = 0;
-            double den2 = 0;
-            for (int i = 0; i < int1.Count(); i++)
-            {
-                //求分子
-                s += int1[i] * int2[i];
-                //求分母（1）
-                den1 += Math.Pow(int1[i], 2);
-                //求分母（2）
-                den2 += Math.Pow(int2[i], 2);
-            }
-
-            return s / (Math.Sqrt(den1) * Math.Sqrt(den2));
-
-            List<string> SimpParticiple(string str)
-            {
-                List<string> vs = new List<string>();
-                foreach (var item in str)
+                DataGrid dg = sender as DataGrid;
+                if (dg.SelectedCells.Count == 1)
                 {
-                    vs.Add(item.ToString());
+                    var a = dg.SelectedCells[0].Item as LnkFile;
+                    switch (dg.SelectedCells[0].Column.DisplayIndex)
+                    {
+                        case 2:
+                            Clipboard.SetText(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? Path.GetFileName(a.LnkPath) : a.LnkPath);
+                            e.Handled = true;
+                            break;
+
+                        case 3:
+                            Clipboard.SetText(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? Path.GetFileName(a.OldPath) : a.OldPath);
+                            e.Handled = true;
+                            break;
+                    }
                 }
-                return vs;
             }
+        }
+
+        private void DataGrid_Selected(object sender, RoutedEventArgs e)
+        {
+            if ((sender as DataGrid).SelectedCells.First().Column.Header.Equals("新的源路径"))
+            {
+                (sender as DataGrid).BeginEdit(e);
+            }
+        }
+
+        private void OpenExplorerAndSelectFile(string path)
+        {
+            if (!File.Exists(path))
+            {
+                return;
+            }
+            string argument = $"/select, \"{path}\"";
+
+            Process.Start("explorer.exe", argument);
         }
 
         private void RepairButton_Click(object sender, RoutedEventArgs e)
@@ -282,49 +364,6 @@ namespace LinkFileRepair
             }
         }
 
-        private void DataGrid_Selected(object sender, RoutedEventArgs e)
-        {
-            if ((sender as DataGrid).SelectedCells.First().Column.Header.Equals("新的源路径"))
-            {
-                (sender as DataGrid).BeginEdit(e);
-            }
-        }
-
-        private void DataGrid_PreviewKeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.C && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
-            {
-                DataGrid dg = sender as DataGrid;
-                if (dg.SelectedCells.Count == 1)
-                {
-                    var a = dg.SelectedCells[0].Item as LnkFile;
-                    switch (dg.SelectedCells[0].Column.DisplayIndex)
-                    {
-                        case 2:
-                            Clipboard.SetText(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? Path.GetFileName(a.LnkPath) : a.LnkPath);
-                            e.Handled = true;
-                            break;
-
-                        case 3:
-                            Clipboard.SetText(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? Path.GetFileName(a.OldPath) : a.OldPath);
-                            e.Handled = true;
-                            break;
-                    }
-                }
-            }
-        }
-
-        private void OpenExplorerAndSelectFile(string path)
-        {
-            if (!File.Exists(path))
-            {
-                return;
-            }
-            string argument = $"/select, \"{path}\"";
-
-            Process.Start("explorer.exe", argument);
-        }
-
         private void TextBlock_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ClickCount == 2)
@@ -349,71 +388,56 @@ namespace LinkFileRepair
         }
     }
 
-    public class LnkFile : INotifyPropertyChanged
+    public class MainWindowViewModel : INotifyPropertyChanged
     {
-        public LnkFile(string path)
-        {
-            Debug.Assert(path.EndsWith(".lnk"));
-            LnkPath = path;
-            ShortCut = Shortcut.ReadFromFile(path);
-            OldPath = shortCut.LinkTargetIDList.Path;
-        }
+        private bool autoHide = true;
+
+        private ObservableCollection<LnkFile> files;
+
+        private bool isWorking;
+
+        private string lnkDir = @"";
+
+        private string sourceDir = "";
 
         private string status;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public bool AutoHide
+        {
+            get => autoHide;
+            set => this.SetValueAndNotify(ref autoHide, value, nameof(AutoHide));
+        }
+
+        public ObservableCollection<LnkFile> Files
+        {
+            get => files;
+            set => this.SetValueAndNotify(ref files, value, nameof(Files));
+        }
+
+        public bool IsWorking
+        {
+            get => isWorking;
+            set => this.SetValueAndNotify(ref isWorking, value, nameof(IsWorking));
+        }
+
+        public string LnkDir
+        {
+            get => lnkDir;
+            set => this.SetValueAndNotify(ref lnkDir, value, nameof(LnkDir));
+        }
+
+        public string SourceDir
+        {
+            get => sourceDir;
+            set => this.SetValueAndNotify(ref sourceDir, value, nameof(SourceDir));
+        }
 
         public string Status
         {
             get => status;
             set => this.SetValueAndNotify(ref status, value, nameof(Status));
         }
-
-        private Shortcut shortCut;
-
-        public Shortcut ShortCut
-        {
-            get => shortCut;
-            set => this.SetValueAndNotify(ref shortCut, value, nameof(ShortCut));
-        }
-
-        public string Name1 => Path.GetFileName(LnkPath);
-        public string Name2 => Path.GetFileName(OldPath);
-
-        private string lnkPath;
-
-        public string LnkPath
-        {
-            get => lnkPath;
-            set => this.SetValueAndNotify(ref lnkPath, value, nameof(LnkPath), nameof(Name1));
-        }
-
-        private string oldPath;
-
-        public string OldPath
-        {
-            get => oldPath;
-            set => this.SetValueAndNotify(ref oldPath, value, nameof(OldPath), nameof(Name2));
-        }
-
-        private string newPath;
-
-        public string NewPath
-        {
-            get => newPath;
-            set => this.SetValueAndNotify(ref newPath, value.Trim('"'), nameof(NewPath));
-        }
-
-        public Brush Foreground => NewPaths != null && NewPaths.Count > 1 ? Brushes.Red : App.Current.MainWindow.Foreground;
-
-        private ObservableCollection<string> newPaths;
-
-        public ObservableCollection<string> NewPaths
-        {
-            get => newPaths;
-            set => this.SetValueAndNotify(ref newPaths, value, nameof(NewPaths), nameof(Foreground));
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        public bool Need { get; set; } = true;
     }
 }
